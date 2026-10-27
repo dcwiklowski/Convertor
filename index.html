@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Measure</title>
+<meta name="description" content="Metric ↔ Imperial unit converter">
+<meta name="theme-color" content="#f3f2f2">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Measure">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Lora:ital,wght@0,400;1,400&display=swap">
+<style>
+/* Classical design-system tokens (from the handoff's _ds/styles.css) */
+:root {
+  --color-bg: #f3f2f2;
+  --color-surface: #eae9e9;
+  --color-text: #201f1d;
+  --color-accent: #b68235;
+  --color-divider: color-mix(in srgb, #201f1d 16%, transparent);
+  --color-neutral-300: #d7d3d3;
+  --color-neutral-500: #9b9797;
+  --color-neutral-600: #7d7979;
+  --color-neutral-700: #605d5d;
+  --color-neutral-900: #2d2b2b;
+  --color-accent-100: #fff3e4;
+  --color-accent-200: #ffe3bf;
+  --color-accent-600: #a06f24;
+  --color-accent-700: #7d5411;
+  --font-heading: "Cormorant Garamond", Georgia, serif;
+  --font-body: "Lora", Georgia, serif;
+  --radius-md: 4px;
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--color-neutral-300);
+  color: var(--color-text);
+  font: 400 15px/1.55 var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tnum { font-feature-settings: "tnum"; }
+.scroll { scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+
+/* App frame: full screen on phones, a phone-width column on wider screens */
+#app {
+  position: relative; overflow: hidden;
+  width: 100%; max-width: 430px; height: 100vh; height: 100dvh; margin: 0 auto;
+  display: flex; flex-direction: column;
+  background: var(--color-bg);
+  padding-top: env(safe-area-inset-top);
+}
+@media (min-width: 431px) { #app { box-shadow: 0 0 0 1px var(--color-divider); } }
+
+.kicker { font: 400 11px var(--font-body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-neutral-700); }
+
+.header { flex: none; display: flex; align-items: baseline; justify-content: space-between; padding: 6px 24px 0; }
+.header h1 { margin: 0; font: 400 34px/1.12 var(--font-heading); letter-spacing: -0.01em; }
+.header-right { display: flex; align-items: center; gap: 4px; }
+.icon-btn {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  background: none; border: 0; border-radius: var(--radius-md); color: var(--color-neutral-700); cursor: pointer; margin-right: -6px;
+}
+.icon-btn:hover { background: var(--color-accent-100); color: var(--color-accent-700); }
+.icon-btn:active { background: var(--color-accent-200); }
+
+.cats { flex: none; display: flex; gap: 22px; overflow-x: auto; padding: 10px 24px 0; border-bottom: 1px solid var(--color-divider); }
+.cat {
+  flex: none; background: none; border: 0; border-bottom: 1.5px solid transparent; margin-bottom: -1px;
+  padding: 6px 0 9px; font: 600 17px var(--font-heading); color: var(--color-neutral-600); cursor: pointer;
+}
+.cat.on { color: var(--color-text); border-bottom-color: var(--color-accent); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+  font: 600 14px/1.2 var(--font-heading); background: transparent; border: 1px solid transparent;
+  border-radius: var(--radius-md); padding: 9.2px 16.5px; color: var(--color-text);
+}
+.btn-ghost { color: var(--color-accent); padding-inline: 4.6px; }
+.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.btn-secondary { border-color: var(--color-divider); }
+.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.btn-unit { font-size: 16px; color: var(--color-text); padding: 4px 2px; }
+
+/* Convert */
+.convert { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.convert-top { flex: none; padding: 16px 24px 0; }
+.ing-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: none; border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+  padding: 7px 12px; margin-bottom: 12px; cursor: pointer; color: var(--color-text);
+}
+.ing-btn:hover { border-color: var(--color-accent); background: var(--color-accent-100); }
+.ing-btn:active { background: var(--color-accent-200); }
+.ing-name { display: flex; align-items: center; gap: 6px; font: 600 16px var(--font-heading); }
+.row { display: flex; align-items: center; justify-content: space-between; }
+.num-row { display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; min-height: 64px; }
+.num { font-family: var(--font-heading); font-weight: 400; line-height: 1.1; font-feature-settings: "tnum"; white-space: nowrap; }
+.caret { display: inline-block; width: 1.5px; height: 0.8em; margin-left: 3px; background: var(--color-accent); vertical-align: -0.05em; }
+.sym { font: 400 18px var(--font-heading); color: var(--color-neutral-700); }
+.swap-line { position: relative; height: 1px; background: var(--color-divider); margin: 12px 0 14px; }
+.swap-btn {
+  position: absolute; left: 0; top: -18px; width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--color-accent); background: var(--color-bg); color: var(--color-accent);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.swap-btn:hover { background: var(--color-accent-100); }
+.swap-btn:active { background: var(--color-accent-200); }
+.formula { margin: 6px 0 0; text-align: right; font: italic 400 13px var(--font-body); color: var(--color-neutral-700); font-feature-settings: "tnum"; }
+.also { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 24px 8px; }
+.also .kicker { padding-bottom: 4px; }
+.also-row {
+  width: 100%; display: flex; justify-content: space-between; align-items: baseline; background: none; border: 0;
+  border-top: 1px solid var(--color-divider); padding: 8px 0; cursor: pointer; color: var(--color-text); text-align: left;
+}
+.also-row:hover { color: var(--color-accent-700); }
+.also-name { font: 400 14px var(--font-body); }
+.also-val { font: 400 18px var(--font-heading); font-feature-settings: "tnum"; }
+.also-val span { color: var(--color-neutral-700); }
+.keypad { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--color-divider); }
+.key {
+  height: 54px; background: none; border: 0; border-bottom: 1px solid var(--color-divider); border-right: 1px solid var(--color-divider);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  font: 400 28px var(--font-heading); font-feature-settings: "tnum"; color: var(--color-text);
+}
+.key.fn { font-size: 22px; color: var(--color-accent-700); border-right-color: transparent; }
+.key.wide { grid-column: span 2; }
+.key:hover { background: var(--color-accent-100); }
+.key:active { background: var(--color-accent-200); }
+
+/* Reference */
+.pane { flex: 1; min-height: 0; overflow-y: auto; }
+.reference { padding: 18px 24px 16px; }
+.ref-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.ref-head h3, .sheet-head h3 { margin: 0; font: 600 22px/1.12 var(--font-heading); letter-spacing: -0.015em; }
+.ref-head .btn { flex: none; padding: 6px 10px; }
+.ref-sub { margin: 0 0 14px; font: italic 400 13px var(--font-body); color: var(--color-neutral-700); }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th {
+  font-size: 11px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent); padding: 9.2px; border-bottom: 1px solid var(--color-divider);
+}
+.table td { padding: 9.2px; border-bottom: 1px solid var(--color-divider); font-feature-settings: "tnum"; }
+.table tbody tr { cursor: pointer; }
+.table tbody tr:hover { background: var(--color-accent-100); }
+.table tbody tr:active { background: var(--color-accent-200); }
+
+/* History */
+.history { padding: 12px 24px 16px; border-top: 1px solid var(--color-divider); margin-top: 10px; }
+.hist-row {
+  width: 100%; display: flex; flex-direction: column; gap: 2px; background: none; border: 0;
+  border-top: 1px solid var(--color-divider); padding: 12px 0; cursor: pointer; text-align: left; color: var(--color-text);
+}
+.hist-row:hover { background: var(--color-accent-100); }
+.hist-meta { display: flex; justify-content: space-between; width: 100%; font: 400 11px var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-700); }
+.hist-meta span + span { text-transform: none; letter-spacing: 0; }
+.hist-val { font: 400 22px var(--font-heading); font-feature-settings: "tnum"; }
+.empty { padding: 80px 12px; text-align: center; }
+.empty h3 { margin: 0 0 6px; font: 400 25px/1.12 var(--font-heading); }
+.empty p { margin: 0; font-size: 14px; color: var(--color-neutral-700); }
+
+/* Tab bar */
+.tabbar {
+  flex: none; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--color-divider);
+  padding: 8px 12px max(12px, env(safe-area-inset-bottom)); background: var(--color-bg);
+}
+.tab {
+  background: none; border: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px;
+  cursor: pointer; color: var(--color-neutral-600); font: 400 11px var(--font-body);
+}
+.tab.on { color: var(--color-accent-700); }
+
+/* Bottom sheet */
+.backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--color-neutral-900) 38%, transparent); }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; max-height: 78%; display: flex; flex-direction: column;
+  background: var(--color-bg); border-radius: 16px 16px 0 0; box-shadow: var(--shadow-lg);
+}
+.anim .backdrop { animation: fade 250ms ease-out; }
+.anim .sheet { animation: slide 250ms ease-out; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes slide { from { transform: translateY(100%); } }
+@media (prefers-reduced-motion: reduce) { .anim .backdrop, .anim .sheet { animation: none; } }
+.sheet-head { flex: none; display: flex; justify-content: space-between; align-items: center; padding: 18px 24px 10px; border-bottom: 1px solid var(--color-divider); }
+.sheet-head .btn { font-size: 15px; }
+.sheet-body { overflow-y: auto; padding: 4px 24px max(34px, env(safe-area-inset-bottom)); }
+.sheet-body .kicker { padding: 16px 0 4px; }
+.opt {
+  width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0;
+  border-top: 1px solid var(--color-divider); padding: 11px 0; cursor: pointer; text-align: left; color: var(--color-text);
+}
+.opt:hover, .opt.on { color: var(--color-accent-700); }
+.opt-name { flex: 1; font: 400 15px var(--font-body); }
+.opt-sym { font: 400 17px var(--font-heading); color: var(--color-neutral-700); }
+.check { width: 18px; display: flex; color: var(--color-accent); }
+
+/* Settings rows */
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--color-divider); padding: 11px 0; }
+.set-row:first-of-type { border-top: 0; }
+.set-label { font: 400 15px var(--font-body); }
+.set-hint { display: block; font: italic 400 12px var(--font-body); color: var(--color-neutral-700); }
+.stepper { display: flex; align-items: center; border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.stepper button { width: 36px; height: 32px; background: none; border: 0; cursor: pointer; color: var(--color-accent-700); font: 400 20px var(--font-heading); }
+.stepper button:hover { background: var(--color-accent-100); }
+.stepper button:active { background: var(--color-accent-200); }
+.stepper button:disabled { color: var(--color-neutral-500); background: none; cursor: default; }
+.stepper output { min-width: 28px; text-align: center; font: 400 18px var(--font-heading); font-feature-settings: "tnum"; }
+.toggle {
+  flex: none; position: relative; width: 44px; height: 26px; border-radius: 13px; cursor: pointer;
+  background: none; border: 1px solid var(--color-divider);
+}
+.toggle::after {
+  content: ""; position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--color-neutral-500); transition: transform 150ms ease-out;
+}
+.toggle[aria-checked="true"] { border-color: var(--color-accent); }
+.toggle[aria-checked="true"]::after { transform: translateX(18px); border-color: var(--color-accent); background: var(--color-accent-200); }
+.toggle:hover { background: var(--color-accent-100); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── Data and conversion maths, ported from the prototype ─────────────────────
+const T = {
+  c: { to: v => v, from: v => v },
+  k: { to: v => v - 273.15, from: v => v + 273.15 },
+  f: { to: v => (v - 32) * 5 / 9, from: v => v * 9 / 5 + 32 },
+};
+const CATS = [
+  { id: 'length', name: 'Length', def: ['km', 'mi'], units: [
+    { id: 'mm', name: 'Millimeters', sym: 'mm', sys: 'm', k: 0.001 },
+    { id: 'cm', name: 'Centimeters', sym: 'cm', sys: 'm', k: 0.01 },
+    { id: 'm', name: 'Meters', sym: 'm', sys: 'm', k: 1 },
+    { id: 'km', name: 'Kilometers', sym: 'km', sys: 'm', k: 1000 },
+    { id: 'in', name: 'Inches', sym: 'in', sys: 'i', k: 0.0254 },
+    { id: 'ft', name: 'Feet', sym: 'ft', sys: 'i', k: 0.3048 },
+    { id: 'yd', name: 'Yards', sym: 'yd', sys: 'i', k: 0.9144 },
+    { id: 'mi', name: 'Miles', sym: 'mi', sys: 'i', k: 1609.344 } ] },
+  { id: 'mass', name: 'Weight', def: ['kg', 'lb'], units: [
+    { id: 'g', name: 'Grams', sym: 'g', sys: 'm', k: 0.001 },
+    { id: 'kg', name: 'Kilograms', sym: 'kg', sys: 'm', k: 1 },
+    { id: 't', name: 'Tonnes', sym: 't', sys: 'm', k: 1000 },
+    { id: 'oz', name: 'Ounces', sym: 'oz', sys: 'i', k: 0.028349523125 },
+    { id: 'lb', name: 'Pounds', sym: 'lb', sys: 'i', k: 0.45359237 },
+    { id: 'st', name: 'Stone', sym: 'st', sys: 'i', k: 6.35029318 } ] },
+  { id: 'volume', name: 'Volume', def: ['l', 'gal'], units: [
+    { id: 'ml', name: 'Milliliters', sym: 'mL', sys: 'm', k: 0.001 },
+    { id: 'l', name: 'Liters', sym: 'L', sys: 'm', k: 1 },
+    { id: 'm3', name: 'Cubic meters', sym: 'm³', sys: 'm', k: 1000 },
+    { id: 'tsp', name: 'Teaspoons', sym: 'tsp', sys: 'i', k: 0.00492892159375 },
+    { id: 'tbsp', name: 'Tablespoons', sym: 'tbsp', sys: 'i', k: 0.01478676478125 },
+    { id: 'floz', name: 'Fluid ounces', sym: 'fl oz', sys: 'i', k: 0.0295735295625 },
+    { id: 'cup', name: 'Cups', sym: 'cup', sys: 'i', k: 0.2365882365 },
+    { id: 'pt', name: 'Pints', sym: 'pt', sys: 'i', k: 0.473176473 },
+    { id: 'qt', name: 'Quarts', sym: 'qt', sys: 'i', k: 0.946352946 },
+    { id: 'gal', name: 'Gallons', sym: 'gal', sys: 'i', k: 3.785411784 } ] },
+  { id: 'cook', name: 'Cooking', def: ['g', 'cup'], units: [
+    { id: 'g', name: 'Grams', sym: 'g', sys: 'm', q: 'w', k: 1 },
+    { id: 'kg', name: 'Kilograms', sym: 'kg', sys: 'm', q: 'w', k: 1000 },
+    { id: 'ml', name: 'Milliliters', sym: 'mL', sys: 'm', q: 'v', k: 1 },
+    { id: 'l', name: 'Liters', sym: 'L', sys: 'm', q: 'v', k: 1000 },
+    { id: 'tsp', name: 'Teaspoons', sym: 'tsp', sys: 'i', q: 'v', k: 4.92892159375 },
+    { id: 'tbsp', name: 'Tablespoons', sym: 'tbsp', sys: 'i', q: 'v', k: 14.78676478125 },
+    { id: 'floz', name: 'Fluid ounces', sym: 'fl oz', sys: 'i', q: 'v', k: 29.5735295625 },
+    { id: 'cup', name: 'Cups', sym: 'cup', sys: 'i', q: 'v', k: 236.5882365 },
+    { id: 'oz', name: 'Ounces', sym: 'oz', sys: 'i', q: 'w', k: 28.349523125 },
+    { id: 'lb', name: 'Pounds', sym: 'lb', sys: 'i', q: 'w', k: 453.59237 } ] },
+  { id: 'temp', name: 'Temperature', def: ['c', 'f'], units: [
+    { id: 'c', name: 'Celsius', sym: '°C', sys: 'm', t: T.c },
+    { id: 'k', name: 'Kelvin', sym: 'K', sys: 'm', t: T.k },
+    { id: 'f', name: 'Fahrenheit', sym: '°F', sys: 'i', t: T.f } ] },
+  { id: 'speed', name: 'Speed', def: ['kmh', 'mph'], units: [
+    { id: 'ms', name: 'Meters per second', sym: 'm/s', sys: 'm', k: 1 },
+    { id: 'kmh', name: 'Kilometers per hour', sym: 'km/h', sys: 'm', k: 1 / 3.6 },
+    { id: 'mph', name: 'Miles per hour', sym: 'mph', sys: 'i', k: 0.44704 },
+    { id: 'kn', name: 'Knots', sym: 'kn', sys: 'i', k: 1852 / 3600 } ] },
+  { id: 'area', name: 'Area', def: ['m2', 'ft2'], units: [
+    { id: 'cm2', name: 'Square centimeters', sym: 'cm²', sys: 'm', k: 1e-4 },
+    { id: 'm2', name: 'Square meters', sym: 'm²', sys: 'm', k: 1 },
+    { id: 'ha', name: 'Hectares', sym: 'ha', sys: 'm', k: 1e4 },
+    { id: 'km2', name: 'Square kilometers', sym: 'km²', sys: 'm', k: 1e6 },
+    { id: 'in2', name: 'Square inches', sym: 'in²', sys: 'i', k: 0.00064516 },
+    { id: 'ft2', name: 'Square feet', sym: 'ft²', sys: 'i', k: 0.09290304 },
+    { id: 'ac', name: 'Acres', sym: 'ac', sys: 'i', k: 4046.8564224 },
+    { id: 'mi2', name: 'Square miles', sym: 'mi²', sys: 'i', k: 2589988.110336 } ] },
+];
+const TEMP_F = { 'c>f': '°F = °C × 1.8 + 32', 'f>c': '°C = (°F − 32) ÷ 1.8', 'c>k': 'K = °C + 273.15', 'k>c': '°C = K − 273.15', 'f>k': 'K = (°F − 32) ÷ 1.8 + 273.15', 'k>f': '°F = (K − 273.15) × 1.8 + 32' };
+const ING = [
+  { id: 'water', name: 'Water', d: 1 }, { id: 'flour', name: 'All-purpose flour', d: 0.528 },
+  { id: 'sugar', name: 'Granulated sugar', d: 0.845 }, { id: 'brown', name: 'Brown sugar', d: 0.93 },
+  { id: 'butter', name: 'Butter', d: 0.96 }, { id: 'milk', name: 'Milk', d: 1.03 },
+  { id: 'oil', name: 'Vegetable oil', d: 0.92 }, { id: 'honey', name: 'Honey', d: 1.42 },
+  { id: 'rice', name: 'Rice, uncooked', d: 0.785 }, { id: 'oats', name: 'Rolled oats', d: 0.38 },
+  { id: 'cocoa', name: 'Cocoa powder', d: 0.42 },
+];
+const cat = id => CATS.find(c => c.id === id);
+const unit = (c, id) => cat(c).units.find(u => u.id === id);
+const ing = id => ING.find(i => i.id === id) || ING[0];
+const conv = (v, a, b, d = 1) => {
+  let base = a.t ? a.t.to(v) : v * a.k;
+  if (a.q && b.q && a.q !== b.q) base = a.q === 'w' ? base / d : base * d;
+  return b.t ? b.t.from(base) : base / b.k;
+};
+const MIN = 60000;
+
+// ── Icons (Lucide) ───────────────────────────────────────────────────────────
+const svg = (size, sw, body) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICON = {
+  chevron: svg(14, 1.75, '<path d="m6 9 6 6 6-6"/>'),
+  swap: svg(16, 1.75, '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>'),
+  check: svg(18, 2, '<path d="M20 6 9 17l-5-5"/>'),
+  ruler: svg(22, 1.5, '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/>'),
+  book: svg(22, 1.5, '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>'),
+  history: svg(22, 1.5, '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>'),
+  settings: svg(18, 1.5, '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'),
+};
+
+// ── State, persisted locally ─────────────────────────────────────────────────
+const STORE = 'measure-v1';
+const DEFAULTS = {
+  tab: 'convert', cat: 'length', input: '10', sheet: null, ing: 'flour', history: [],
+  sel: Object.fromEntries(CATS.map(c => [c.id, { from: c.def[0], to: c.def[1] }])),
+  settings: { precision: 4, showAlso: true, saveHistory: true },
+};
+function load() {
+  const s = structuredClone(DEFAULTS);
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE) || '{}');
+    if (cat(saved.cat)) s.cat = saved.cat;
+    if (ING.some(i => i.id === saved.ing)) s.ing = saved.ing;
+    for (const c of CATS) {
+      const p = saved.sel && saved.sel[c.id];
+      if (p && unit(c.id, p.from) && unit(c.id, p.to)) s.sel[c.id] = { from: p.from, to: p.to };
+    }
+    if (Array.isArray(saved.history)) s.history = saved.history.filter(h => cat(h.cat) && unit(h.cat, h.from) && unit(h.cat, h.to)).slice(0, 30);
+    if (saved.settings) Object.assign(s.settings, saved.settings);
+  } catch (e) { /* storage unavailable: start from defaults */ }
+  return s;
+}
+let state = load();
+let timer = null;
+let lastSheet = null;
+
+function persist() {
+  const { history, sel, cat, ing, settings } = state;
+  try { localStorage.setItem(STORE, JSON.stringify({ history, sel, cat, ing, settings })); } catch (e) {}
+}
+function setState(patch, after) {
+  state = { ...state, ...(typeof patch === 'function' ? patch(state) : patch) };
+  persist();
+  render();
+  if (after) after();
+}
+
+// ── Behavior ─────────────────────────────────────────────────────────────────
+const c3 = (v, a, b, i) => conv(v, a, b, ing(i || state.ing).d);
+function fmt(n) {
+  if (!isFinite(n)) return '—';
+  const p = state.settings.precision;
+  if (Math.abs(n) >= 1e12) return n.toExponential(3).replace('-', '−');
+  const o = n !== 0 && Math.abs(n) < 1 ? { maximumSignificantDigits: p } : { maximumFractionDigits: p };
+  return new Intl.NumberFormat('en-US', o).format(n).replace('-', '−');
+}
+function fmtInput(s) {
+  if (s === '' || s === '-') return s === '-' ? '−' : '0';
+  const neg = s.startsWith('-'); const body = neg ? s.slice(1) : s;
+  const [i, d] = body.split('.');
+  const int = (i || '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (neg ? '−' : '') + int + (d !== undefined ? '.' + d : '');
+}
+function setSel(patch, extra = {}) {
+  setState(s => ({ sel: { ...s.sel, [s.cat]: { ...s.sel[s.cat], ...patch } }, ...extra }), schedule);
+}
+function swap() { const { from, to } = state.sel[state.cat]; setSel({ from: to, to: from }); }
+function press(k) {
+  let v = state.input;
+  if (/\d/.test(k)) { if (v.replace(/[-.]/g, '').length >= 12) return; v = v === '0' ? k : v === '-0' ? '-' + k : v + k; }
+  else if (k === '.') { if (!v.includes('.')) v = (v === '' || v === '-' ? v + '0' : v) + '.'; }
+  else if (k === 'del') v = v.slice(0, -1);
+  else if (k === 'C') v = '';
+  else if (k === 'neg') v = v.startsWith('-') ? v.slice(1) : '-' + v;
+  setState({ input: v }, schedule);
+}
+function schedule() {
+  clearTimeout(timer);
+  if (!state.settings.saveHistory) return;
+  timer = setTimeout(save, 1500);
+}
+function save() {
+  const { cat: c, input, sel, history } = state;
+  const n = parseFloat(input);
+  if (!isFinite(n) || n === 0) return;
+  const e = { cat: c, from: sel[c].from, to: sel[c].to, v: input, t: Date.now(), ing: state.ing };
+  const top = history[0];
+  if (top && top.cat === e.cat && top.from === e.from && top.to === e.to && top.v === e.v && top.ing === e.ing) return;
+  setState({ history: [e, ...history].slice(0, 30) });
+}
+function when(t) {
+  const m = Math.round((Date.now() - t) / MIN);
+  if (m < 1) return 'Just now';
+  if (m < 60) return m + ' min ago';
+  if (m < 24 * 60) return Math.round(m / 60) + ' h ago';
+  if (m < 48 * 60) return 'Yesterday';
+  return Math.floor(m / (24 * 60)) + ' days ago';
+}
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+
+// ── Render ───────────────────────────────────────────────────────────────────
+const sizeFor = len => len <= 7 ? 54 : len <= 10 ? 42 : 34;
+
+function renderConvert(c, fromU, toU, val, formula) {
+  const inputDisplay = fmtInput(state.input);
+  const result = fmt(c3(val, fromU, toU));
+  const also = c.units.filter(u => u.sys === toU.sys && u.id !== toU.id && u.id !== fromU.id);
+  const keys = [['7'], ['8'], ['9'], ['del', '⌫', 'Delete'], ['4'], ['5'], ['6'], ['C', 'C', 'Clear'], ['1'], ['2'], ['3'], ['neg', '±', 'Toggle sign'], ['0', '0', '0', true], ['.'], ['swap', '⇅', 'Swap units']];
+  return `<div class="convert">
+    <div class="convert-top">
+      ${c.id === 'cook' ? `<button class="ing-btn" data-act="sheet" data-arg="ing"><span class="kicker">Ingredient</span><span class="ing-name">${esc(ing(state.ing).name)}${ICON.chevron}</span></button>` : ''}
+      <div class="row"><span class="kicker">From</span><button class="btn btn-ghost btn-unit" data-act="sheet" data-arg="from">${fromU.name}${ICON.chevron}</button></div>
+      <div class="num-row" aria-live="polite">
+        <span class="num" style="font-size:${sizeFor(inputDisplay.length)}px;color:${state.input === '' ? 'var(--color-neutral-500)' : 'var(--color-text)'}">${inputDisplay}<span class="caret"></span></span>
+        <span class="sym">${fromU.sym}</span>
+      </div>
+      <div class="swap-line"><button class="swap-btn" data-act="swap" aria-label="Swap units">${ICON.swap}</button></div>
+      <div class="row"><span class="kicker">To</span><button class="btn btn-ghost btn-unit" data-act="sheet" data-arg="to">${toU.name}${ICON.chevron}</button></div>
+      <div class="num-row">
+        <span class="num" style="font-size:${sizeFor(result.length)}px;color:var(--color-accent-700)">${result}</span>
+        <span class="sym" style="color:var(--color-accent-700)">${toU.sym}</span>
+      </div>
+      <p class="formula">${esc(formula)}</p>
+    </div>
+    <div class="also scroll" data-keep="also">
+      ${state.settings.showAlso && also.length ? `<div class="kicker">Also equals</div>` + also.map(u =>
+        `<button class="also-row" data-act="to" data-arg="${u.id}"><span class="also-name">${u.name}</span><span class="also-val">${fmt(c3(val, fromU, u))} <span>${u.sym}</span></span></button>`).join('') : ''}
+    </div>
+    <div class="keypad">
+      ${keys.map(([id, label, aria, wide]) => {
+        const fn = ['del', 'C', 'neg', 'swap'].includes(id);
+        return `<button class="key${fn ? ' fn' : ''}${wide ? ' wide' : ''}" data-act="${id === 'swap' ? 'swap' : 'key'}" data-arg="${id}" aria-label="${aria || id}">${label || id}</button>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function renderReference(c, fromU, toU, formula) {
+  const vals = c.id === 'temp' ? [-40, -20, -10, 0, 10, 20, 25, 30, 37, 100] : [1, 2, 5, 10, 20, 50, 100, 250, 500, 1000];
+  return `<div class="pane reference scroll">
+    <div class="ref-head"><h3>${fromU.name} to ${toU.name}</h3><button class="btn btn-secondary" data-act="swap">Swap</button></div>
+    <p class="ref-sub">${esc(formula)}. Tap a row to open it in the converter.</p>
+    <table class="table">
+      <thead><tr><th style="text-align:left">${fromU.sym}</th><th style="text-align:right">${toU.sym}</th></tr></thead>
+      <tbody>${vals.map(v => `<tr data-act="ref" data-arg="${v}" tabindex="0"><td>${fmt(v)}</td><td style="text-align:right;color:var(--color-accent-700)">${fmt(c3(v, fromU, toU))}</td></tr>`).join('')}</tbody>
+    </table>
+  </div>`;
+}
+
+function renderHistory() {
+  if (!state.history.length) {
+    return `<div class="pane history scroll"><div class="empty"><h3>Nothing yet</h3><p>Conversions you make are kept here.</p></div></div>`;
+  }
+  return `<div class="pane history scroll">
+    <div class="row" style="padding-bottom:6px"><span class="kicker">Recent</span><button class="btn btn-ghost" style="font-size:14px" data-act="clear">Clear all</button></div>
+    ${state.history.map((h, i) => {
+      const a = unit(h.cat, h.from), b = unit(h.cat, h.to);
+      const mixed = a.q && b.q && a.q !== b.q;
+      return `<button class="hist-row" data-act="restore" data-arg="${i}">
+        <span class="hist-meta"><span>${cat(h.cat).name}${mixed ? ' · ' + esc(ing(h.ing).name) : ''}</span><span>${when(h.t)}</span></span>
+        <span class="hist-val">${fmtInput(h.v)} ${a.sym} <span style="color:var(--color-neutral-700)">→</span> <span style="color:var(--color-accent-700)">${fmt(c3(parseFloat(h.v), a, b, h.ing))} ${b.sym}</span></span>
+      </button>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderSheet(c) {
+  const slot = state.sheet;
+  if (!slot) return '';
+  const opt = (act, arg, name, sym, on) =>
+    `<button class="opt${on ? ' on' : ''}" data-act="${act}" data-arg="${arg}"><span class="opt-name">${esc(name)}</span><span class="opt-sym">${sym}</span><span class="check">${on ? ICON.check : ''}</span></button>`;
+  let title, body;
+  if (slot === 'settings') {
+    const st = state.settings;
+    const toggle = (key, label, hint) => `<div class="set-row"><span class="set-label">${label}<span class="set-hint">${hint}</span></span>
+      <button class="toggle" role="switch" aria-checked="${st[key]}" aria-label="${label}" data-act="toggle" data-arg="${key}"></button></div>`;
+    title = 'Settings';
+    body = `<div style="padding-top:8px">
+      <div class="set-row"><span class="set-label">Precision<span class="set-hint">Decimal places in results</span></span>
+        <div class="stepper"><button data-act="prec" data-arg="-1" aria-label="Fewer decimals" ${st.precision <= 1 ? 'disabled' : ''}>−</button><output>${st.precision}</output><button data-act="prec" data-arg="1" aria-label="More decimals" ${st.precision >= 8 ? 'disabled' : ''}>+</button></div></div>
+      ${toggle('showAlso', 'Show “Also equals”', 'Other units under the result')}
+      ${toggle('saveHistory', 'Save history', 'Keep conversions automatically')}
+    </div>`;
+  } else if (slot === 'ing') {
+    title = 'Ingredient';
+    body = `<div class="kicker">Ingredient</div>` + ING.map(i => opt('pick-ing', i.id, i.name, Math.round(i.d * 236.5882365) + ' g/cup', i.id === state.ing)).join('');
+  } else {
+    const cur = state.sel[state.cat][slot];
+    title = slot === 'from' ? 'Convert from' : 'Convert to';
+    body = [['m', 'Metric'], ['i', 'Imperial']].map(([sys, label]) =>
+      `<div class="kicker">${label}</div>` + c.units.filter(u => u.sys === sys).map(u => opt('pick', u.id, u.name, u.sym, u.id === cur)).join('')).join('');
+  }
+  return `<div class="${lastSheet !== slot ? 'anim' : ''}">
+    <div class="backdrop" data-act="close"></div>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="${title}">
+      <div class="sheet-head"><h3>${title}</h3><button class="btn btn-ghost" data-act="close">Done</button></div>
+      <div class="sheet-body scroll">${body}</div>
+    </div>
+  </div>`;
+}
+
+const app = document.getElementById('app');
+function render() {
+  // Keep scroll positions and keyboard focus across re-renders
+  const scroll = {};
+  app.querySelectorAll('[data-keep]').forEach(el => { scroll[el.dataset.keep] = [el.scrollLeft, el.scrollTop]; });
+  const f = document.activeElement;
+  const focusKey = f && f.dataset && f.dataset.act ? [f.dataset.act, f.dataset.arg] : null;
+
+  const s = state;
+  const c = cat(s.cat);
+  const fromU = unit(s.cat, s.sel[s.cat].from), toU = unit(s.cat, s.sel[s.cat].to);
+  const n = parseFloat(s.input);
+  const val = isFinite(n) ? n : 0;
+  const mixedQ = fromU.q && toU.q && fromU.q !== toU.q;
+  const formula = c.id === 'temp' ? (TEMP_F[fromU.id + '>' + toU.id] || 'Same unit')
+    : `1 ${fromU.sym} = ${fmt(c3(1, fromU, toU))} ${toU.sym}` + (mixedQ ? ' of ' + ing(s.ing).name.toLowerCase() : '');
+  const title = { convert: 'Measure', reference: 'Reference', history: 'History' }[s.tab];
+  const tab = (id, icon, label) => `<button class="tab${s.tab === id ? ' on' : ''}" data-act="tab" data-arg="${id}"${s.tab === id ? ' aria-current="page"' : ''}>${icon}${label}</button>`;
+
+  app.innerHTML = `
+    <header class="header"><h1>${title}</h1>
+      <div class="header-right"><span class="kicker">Metric · Imperial</span><button class="icon-btn" data-act="sheet" data-arg="settings" aria-label="Settings">${ICON.settings}</button></div>
+    </header>
+    ${s.tab !== 'history' ? `<nav class="cats scroll" data-keep="cats">${CATS.map(x =>
+      `<button class="cat${x.id === s.cat ? ' on' : ''}" data-act="cat" data-arg="${x.id}">${x.name}</button>`).join('')}</nav>` : ''}
+    ${s.tab === 'convert' ? renderConvert(c, fromU, toU, val, formula) : s.tab === 'reference' ? renderReference(c, fromU, toU, formula) : renderHistory()}
+    <nav class="tabbar">${tab('convert', ICON.ruler, 'Convert')}${tab('reference', ICON.book, 'Reference')}${tab('history', ICON.history, 'History')}</nav>
+    ${renderSheet(c)}`;
+  lastSheet = s.sheet;
+
+  app.querySelectorAll('[data-keep]').forEach(el => {
+    const p = scroll[el.dataset.keep];
+    if (p) { el.scrollLeft = p[0]; el.scrollTop = p[1]; }
+  });
+  if (focusKey) {
+    const el = app.querySelector(`[data-act="${focusKey[0]}"]${focusKey[1] !== undefined ? `[data-arg="${focusKey[1]}"]` : ''}`);
+    if (el) el.focus({ preventScroll: true });
+  }
+}
+
+const ACTIONS = {
+  tab: id => setState({ tab: id }),
+  cat: id => setState({ cat: id }),
+  key: k => press(k),
+  swap: () => swap(),
+  sheet: slot => setState({ sheet: slot }),
+  close: () => setState({ sheet: null }),
+  pick: id => setSel({ [state.sheet]: id }, { sheet: null }),
+  'pick-ing': id => setState({ ing: id, sheet: null }, schedule),
+  to: id => setSel({ to: id }),
+  ref: v => setState({ input: v, tab: 'convert' }),
+  clear: () => setState({ history: [] }),
+  restore: i => {
+    const h = state.history[+i];
+    setState(st => ({ cat: h.cat, input: h.v, tab: 'convert', ing: h.ing || st.ing, sel: { ...st.sel, [h.cat]: { from: h.from, to: h.to } } }));
+  },
+  prec: d => setState(st => ({ settings: { ...st.settings, precision: Math.min(8, Math.max(1, st.settings.precision + +d)) } })),
+  toggle: key => {
+    setState(st => ({ settings: { ...st.settings, [key]: !st.settings[key] } }));
+    if (key === 'saveHistory' && !state.settings.saveHistory) clearTimeout(timer);
+  },
+};
+app.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (el && ACTIONS[el.dataset.act]) ACTIONS[el.dataset.act](el.dataset.arg);
+});
+app.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && state.sheet) setState({ sheet: null });
+  // Table rows aren't buttons; let Enter/Space open them
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-act]')) { e.preventDefault(); e.target.click(); }
+});
+
+render();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+}
+</script>
+</body>
+</html>
